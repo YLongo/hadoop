@@ -1366,11 +1366,13 @@ public class NameNode implements NameNodeStatusMXBean {
       StartupOption.METADATAVERSION, fs, null);
   }
 
-  public static NameNode createNameNode(String argv[], Configuration conf)
-      throws IOException {
+  public static NameNode createNameNode(String argv[], Configuration conf) throws IOException {
+    
     LOG.info("createNameNode " + Arrays.asList(argv));
-    if (conf == null)
+    if (conf == null) {
       conf = new HdfsConfiguration();
+    }
+    
     // Parse out some generic args into Configuration.
     GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
     argv = hParser.getRemainingArgs();
@@ -1380,6 +1382,7 @@ public class NameNode implements NameNodeStatusMXBean {
       printUsage(System.err);
       return null;
     }
+    
     setStartupOption(conf, startOpt);
 
     switch (startOpt) {
@@ -1441,7 +1444,7 @@ public class NameNode implements NameNodeStatusMXBean {
         terminate(0);
         return null;
       }
-      default: {
+      default: { // 核心源码
         DefaultMetricsSystem.initialize("NameNode");
         return new NameNode(conf);
       }
