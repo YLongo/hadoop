@@ -598,15 +598,16 @@ public class NameNode implements NameNodeStatusMXBean {
     // 初始化NameSystem
     loadNamesystem(conf);
 
+    // 初始化rpcServer用于接收datanode与客户端的请求
     rpcServer = createRpcServer(conf);
+    
     if (clientNamenodeAddress == null) {
       // This is expected for MiniDFSCluster. Set it now using 
       // the RPC server's bind address.
-      clientNamenodeAddress = 
-          NetUtils.getHostPortString(rpcServer.getRpcAddress());
-      LOG.info("Clients are to use " + clientNamenodeAddress + " to access"
-          + " this namenode/service.");
+      clientNamenodeAddress = NetUtils.getHostPortString(rpcServer.getRpcAddress());
+      LOG.info("Clients are to use " + clientNamenodeAddress + " to access this namenode/service.");
     }
+    
     if (NamenodeRole.NAMENODE == role) {
       httpServer.setNameNodeAddress(getNameNodeAddress());
       httpServer.setFSImage(getFSImage());
@@ -623,8 +624,7 @@ public class NameNode implements NameNodeStatusMXBean {
    * Create the RPC server implementation. Used as an extension point for the
    * BackupNode.
    */
-  protected NameNodeRpcServer createRpcServer(Configuration conf)
-      throws IOException {
+  protected NameNodeRpcServer createRpcServer(Configuration conf) throws IOException {
     return new NameNodeRpcServer(conf, this);
   }
 
@@ -638,8 +638,8 @@ public class NameNode implements NameNodeStatusMXBean {
       httpServer.setFSImage(getFSImage());
     }
     rpcServer.start();
-    plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY,
-        ServicePlugin.class);
+    plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY, ServicePlugin.class);
+    
     for (ServicePlugin p: plugins) {
       try {
         p.start(this);
@@ -649,8 +649,7 @@ public class NameNode implements NameNodeStatusMXBean {
     }
     LOG.info(getRole() + " RPC up at: " + rpcServer.getRpcAddress());
     if (rpcServer.getServiceRpcAddress() != null) {
-      LOG.info(getRole() + " service RPC up at: "
-          + rpcServer.getServiceRpcAddress());
+      LOG.info(getRole() + " service RPC up at: " + rpcServer.getServiceRpcAddress());
     }
   }
   

@@ -82,13 +82,10 @@ public class NameNodeResourceChecker {
     public boolean isResourceAvailable() {
       long availableSpace = df.getAvailable();
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Space available on volume '" + volume + "' is "
-            + availableSpace);
+        LOG.debug("Space available on volume '" + volume + "' is " + availableSpace);
       }
-      if (availableSpace < duReserved) {
-        LOG.warn("Space available on volume '" + volume + "' is "
-            + availableSpace +
-            ", which is below the configured reserved amount " + duReserved);
+      if (availableSpace < duReserved) { // 默认是100MB
+        LOG.warn("Space available on volume '" + volume + "' is " + availableSpace + ", which is below the configured reserved amount " + duReserved);
         return false;
       } else {
         return true;
@@ -110,8 +107,7 @@ public class NameNodeResourceChecker {
     this.conf = conf;
     volumes = new HashMap<String, CheckedVolume>();
 
-    duReserved = conf.getLong(DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_KEY,
-        DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_DEFAULT);
+    duReserved = conf.getLong(DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_KEY, DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_DEFAULT);
     
     Collection<URI> extraCheckedVolumes = Util.stringCollectionAsURIs(conf
         .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_KEY));
@@ -178,8 +174,7 @@ public class NameNodeResourceChecker {
    *         otherwise.
    */
   public boolean hasAvailableDiskSpace() {
-    return NameNodeResourcePolicy.areResourcesAvailable(volumes.values(),
-        minimumRedundantVolumes);
+    return NameNodeResourcePolicy.areResourcesAvailable(volumes.values(), minimumRedundantVolumes);
   }
 
   /**

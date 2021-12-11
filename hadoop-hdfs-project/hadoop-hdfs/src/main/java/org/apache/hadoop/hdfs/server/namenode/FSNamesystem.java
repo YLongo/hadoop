@@ -1106,13 +1106,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     this.haContext = haContext;
     try {
       nnResourceChecker = new NameNodeResourceChecker(conf);
+      // 检查磁盘空间是否足够写入edits文件
       checkAvailableResources();
+      
       assert safeMode != null && !isPopulatingReplQueues();
+      
       StartupProgress prog = NameNode.getStartupProgress();
       prog.beginPhase(Phase.SAFEMODE);
-      prog.setTotal(Phase.SAFEMODE, STEP_AWAITING_REPORTED_BLOCKS,
-        getCompleteBlocksTotal());
+      prog.setTotal(Phase.SAFEMODE, STEP_AWAITING_REPORTED_BLOCKS, getCompleteBlocksTotal());
+      
+      // 判断是否要进入safemode，如果进入了safemode会做些什么
       setBlockTotal();
+      
       blockManager.activate(conf);
     } finally {
       writeUnlock();
@@ -5115,8 +5120,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Perform resource checks and cache the results.
    */
   void checkAvailableResources() {
-    Preconditions.checkState(nnResourceChecker != null,
-        "nnResourceChecker not initialized");
+    Preconditions.checkState(nnResourceChecker != null, "nnResourceChecker not initialized");
     hasResourcesAvailable = nnResourceChecker.hasAvailableDiskSpace();
   }
 
@@ -5910,6 +5914,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     private synchronized void setBlockTotal(int total) {
       this.blockTotal = total;
+      
+      // threshold表示99.9%的block必须满足副本的数量大于1
+      // @see SafeModeInfo(org.apache.hadoop.conf.Configuration)
       this.blockThreshold = (int) (blockTotal * threshold);
       this.blockReplQueueThreshold = 
         (int) (blockTotal * replQueueThreshold);
