@@ -595,6 +595,7 @@ public class NameNode implements NameNodeStatusMXBean {
 
     this.spanReceiverHost = SpanReceiverHost.getInstance(conf);
 
+    // 初始化NameSystem
     loadNamesystem(conf);
 
     rpcServer = createRpcServer(conf);

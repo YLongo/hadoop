@@ -139,7 +139,7 @@ public class NameNodeHttpServer {
     httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     
-    // 再HttpServer2中绑定一堆已经定义好的Servlet，用来接收Http请求
+    // 在HttpServer2中绑定一堆已经定义好的Servlet，用来接收Http请求
     setupServlets(httpServer, conf);
     httpServer.start();
 

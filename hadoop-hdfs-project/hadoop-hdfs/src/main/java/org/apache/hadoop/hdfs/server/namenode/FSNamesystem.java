@@ -727,10 +727,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   static FSNamesystem loadFromDisk(Configuration conf) throws IOException {
 
     checkConfiguration(conf);
-    FSImage fsImage = new FSImage(conf,
-        FSNamesystem.getNamespaceDirs(conf),
-        FSNamesystem.getNamespaceEditsDirs(conf));
+    
+    // 默认情况下fimage文件于eidts文件在同一个目录下
+    FSImage fsImage = new FSImage(conf, FSNamesystem.getNamespaceDirs(conf), FSNamesystem.getNamespaceEditsDirs(conf));
+    
     FSNamesystem namesystem = new FSNamesystem(conf, fsImage, false);
+    
     StartupOption startOpt = NameNode.getStartupOption(conf);
     if (startOpt == StartupOption.RECOVER) {
       namesystem.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
@@ -738,6 +740,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     long loadStart = now();
     try {
+      // 合并fsimage文件于edits文件中的数据
       namesystem.loadFSImage(startOpt);
     } catch (IOException ioe) {
       LOG.warn("Encountered exception loading fsimage", ioe);
@@ -1387,6 +1390,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   public static Collection<URI> getNamespaceDirs(Configuration conf) {
+    // hdfs-default.xml
     return getStorageDirs(conf, DFS_NAMENODE_NAME_DIR_KEY);
   }
 
@@ -1444,14 +1448,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @return Collection of shared edits directories.
    * @throws IOException if multiple shared edits directories are configured
    */
-  public static List<URI> getNamespaceEditsDirs(Configuration conf)
-      throws IOException {
+  public static List<URI> getNamespaceEditsDirs(Configuration conf) throws IOException {
     return getNamespaceEditsDirs(conf, true);
   }
   
-  public static List<URI> getNamespaceEditsDirs(Configuration conf,
-      boolean includeShared)
-      throws IOException {
+  public static List<URI> getNamespaceEditsDirs(Configuration conf, boolean includeShared) throws IOException {
     // Use a LinkedHashSet so that order is maintained while we de-dup
     // the entries.
     LinkedHashSet<URI> editsDirs = new LinkedHashSet<URI>();
@@ -1461,8 +1462,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
       // Fail until multiple shared edits directories are supported (HDFS-2782)
       if (sharedDirs.size() > 1) {
-        throw new IOException(
-            "Multiple shared edits directories are not yet supported");
+        throw new IOException("Multiple shared edits directories are not yet supported");
       }
   
       // First add the shared edits dirs. It's critical that the shared dirs
@@ -1488,6 +1488,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (editsDirs.isEmpty()) {
       // If this is the case, no edit dirs have been explicitly configured.
       // Image dirs are to be used for edits too.
+      
+      // hdfs-default.xml
       return Lists.newArrayList(getNamespaceDirs(conf));
     } else {
       return Lists.newArrayList(editsDirs);
