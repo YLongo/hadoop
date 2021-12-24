@@ -214,30 +214,55 @@ import com.google.protobuf.BlockingService;
  * have one or many DataNodes.  Each DataNode communicates
  * regularly with a single NameNode.  It also communicates
  * with client code and other DataNodes from time to time.
- *
+ * <p>
+ * 
+ * DataNode负责存储block <br>
+ * 每个DataNode定时跟NameNode通信 <br>
+ * DataNode之间或者与客户端之间会持续进行通信
+ * 
+ * </p>
  * DataNodes store a series of named blocks.  The DataNode
  * allows client code to read these blocks, or to write new
  * block data.  The DataNode may also, in response to instructions
  * from its NameNode, delete blocks or copy blocks to/from other
  * DataNodes.
- *
+ * <p>
+ * 
+ * DataNode允许客户端对block进行读写 <br>
+ * DataNode接收NameNode的指令对block进行删除或者将block复制到其他的DataNode节点 <br>
+ * 
+ * </p>
  * The DataNode maintains just one critical table:
  *   block-> stream of bytes (of BLOCK_SIZE or less)
  *
  * This info is stored on a local disk.  The DataNode
  * reports the table's contents to the NameNode upon startup
  * and every so often afterwards.
- *
+ * <p>
+ * 
+ * DataNode在本地磁盘中维护一份：block -> 字节流的数据 <br>
+ * 并在每次启动的时候以及后续不断的向NameNode汇报
+ *     
+ * </p>
  * DataNodes spend their lives in an endless loop of asking
  * the NameNode for something to do.  A NameNode cannot connect
  * to a DataNode directly; a NameNode simply returns values from
  * functions invoked by a DataNode.
- *
+ * <p>
+ *     
+ * DataNode会持续的向NameNode发送心跳，但是NameNode不能直接连接DataNode
+ *     
+ * </p>
  * DataNodes maintain an open server socket so that client code 
  * or other DataNodes can read/write data.  The host/port for
  * this server is reported to the NameNode, which then sends that
  * information to clients or other DataNodes that might be interested.
- *
+ * <p>
+ *  
+ * DataNode会监听一个Socket，让客户端与其它的DataNode进行数据的读写 <br>
+ * DataNode会将监听的host/port发送给NameNode以及其他的DataNode
+ *     
+ * </p>
  **********************************************************/
 @InterfaceAudience.Private
 public class DataNode extends ReconfigurableBase
@@ -368,13 +393,11 @@ public class DataNode extends ReconfigurableBase
    * Create the DataNode given a configuration, an array of dataDirs,
    * and a namenode proxy
    */
-  DataNode(final Configuration conf,
-           final List<StorageLocation> dataDirs,
-           final SecureResources resources) throws IOException {
+  DataNode(final Configuration conf, final List<StorageLocation> dataDirs, final SecureResources resources) throws IOException {
+    
     super(conf);
     this.lastDiskErrorCheck = 0;
-    this.maxNumberOfBlocksToLog = conf.getLong(DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
-        DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT);
+    this.maxNumberOfBlocksToLog = conf.getLong(DFS_MAX_NUM_BLOCKS_TO_LOG_KEY, DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT);
 
     this.usersWithLocalPathAccess = Arrays.asList(
         conf.getTrimmedStrings(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY));
@@ -415,7 +438,10 @@ public class DataNode extends ReconfigurableBase
     try {
       hostName = getHostName(conf);
       LOG.info("Configured hostname is " + hostName);
+      
+      // 通过指定的配置实例化一个datanode
       startDataNode(conf, dataDirs, resources);
+      
     } catch (IOException ie) {
       shutdown();
       throw ie;
@@ -637,6 +663,7 @@ public class DataNode extends ReconfigurableBase
    * Http Policy is decided.
    */
   private void startInfoServer(Configuration conf) throws IOException {
+    
     HttpServer2.Builder builder = new HttpServer2.Builder().setName("datanode")
         .setConf(conf).setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")));
 
@@ -669,26 +696,24 @@ public class DataNode extends ReconfigurableBase
       if (port == 0) {
         builder.setFindPort(true);
       }
-      builder.addEndpoint(URI.create("https://"
-          + NetUtils.getHostPortString(secInfoSocAddr)));
+      builder.addEndpoint(URI.create("https://" + NetUtils.getHostPortString(secInfoSocAddr)));
     }
 
     this.infoServer = builder.build();
 
     this.infoServer.addInternalServlet(null, "/streamFile/*", StreamFile.class);
-    this.infoServer.addInternalServlet(null, "/getFileChecksum/*",
-        FileChecksumServlets.GetServlet.class);
+    this.infoServer.addInternalServlet(null, "/getFileChecksum/*", FileChecksumServlets.GetServlet.class);
     
     this.infoServer.setAttribute("datanode", this);
     this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-    this.infoServer.addServlet(null, "/blockScannerReport", 
-                               DataBlockScanner.Servlet.class);
+    this.infoServer.addServlet(null, "/blockScannerReport", DataBlockScanner.Servlet.class);
 
     if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
       infoServer.addJerseyResourcePackage(DatanodeWebHdfsMethods.class
           .getPackage().getName() + ";" + Param.class.getPackage().getName(),
           WebHdfsFileSystem.PATH_PREFIX + "/*");
     }
+    
     this.infoServer.start();
 
     int connIdx = 0;
@@ -879,7 +904,10 @@ public class DataNode extends ReconfigurableBase
     streamingAddr = tcpPeerServer.getStreamingAddr();
     LOG.info("Opened streaming server at " + streamingAddr);
     this.threadGroup = new ThreadGroup("dataXceiverServer");
+    
+    // 在后台负责接收client以及datanode的请求
     xserver = new DataXceiverServer(tcpPeerServer, conf, this);
+    
     this.dataXceiverServer = new Daemon(threadGroup, xserver);
     this.threadGroup.setDaemon(true); // auto destroy when empty
 
@@ -1081,12 +1109,17 @@ public class DataNode extends ReconfigurableBase
     LOG.info("Starting DataNode with maxLockedMemory = " +
         dnConf.maxLockedMemory);
 
+    // 负责管理datanode上block的数据
     storage = new DataStorage();
     
     // global DN settings
     registerMXBean();
+    
     initDataXceiver(conf);
+    
+    // 用于接收某些http的请求
     startInfoServer(conf);
+    
     pauseMonitor = new JvmPauseMonitor(conf);
     pauseMonitor.start();
   
@@ -1097,6 +1130,7 @@ public class DataNode extends ReconfigurableBase
     dnUserName = UserGroupInformation.getCurrentUser().getShortUserName();
     LOG.info("dnUserName = " + dnUserName);
     LOG.info("supergroup = " + supergroup);
+    
     initIpcServer(conf);
 
     metrics = DataNodeMetrics.create(conf, getDisplayName());
@@ -2261,8 +2295,7 @@ public class DataNode extends ReconfigurableBase
    */
   @VisibleForTesting
   @InterfaceAudience.Private
-  public static DataNode createDataNode(String args[], Configuration conf,
-      SecureResources resources) throws IOException {
+  public static DataNode createDataNode(String args[], Configuration conf, SecureResources resources) throws IOException {
     DataNode dn = instantiateDataNode(args, conf, resources);
     if (dn != null) {
       dn.runDatanodeDaemon();

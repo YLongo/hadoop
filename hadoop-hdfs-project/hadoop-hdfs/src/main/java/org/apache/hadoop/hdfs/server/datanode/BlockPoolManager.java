@@ -147,21 +147,20 @@ class BlockPoolManager {
     }
   }
   
-  void refreshNamenodes(Configuration conf)
-      throws IOException {
+  void refreshNamenodes(Configuration conf) throws IOException {
+    
     LOG.info("Refresh request received for nameservices: " + conf.get
             (DFSConfigKeys.DFS_NAMESERVICES));
 
-    Map<String, Map<String, InetSocketAddress>> newAddressMap = DFSUtil
-            .getNNServiceRpcAddressesForCluster(conf);
+    Map<String, Map<String, InetSocketAddress>> newAddressMap = DFSUtil.getNNServiceRpcAddressesForCluster(conf);
 
     synchronized (refreshNamenodesLock) {
       doRefreshNamenodes(newAddressMap);
     }
   }
   
-  private void doRefreshNamenodes(
-      Map<String, Map<String, InetSocketAddress>> addrMap) throws IOException {
+  private void doRefreshNamenodes(Map<String, Map<String, InetSocketAddress>> addrMap) throws IOException {
+    
     assert Thread.holdsLock(refreshNamenodesLock);
 
     Set<String> toRefresh = Sets.newLinkedHashSet();
@@ -182,8 +181,7 @@ class BlockPoolManager {
       
       // Step 2. Any nameservices we currently have but are no longer present
       // need to be removed.
-      toRemove = Sets.newHashSet(Sets.difference(
-          bpByNameserviceId.keySet(), addrMap.keySet()));
+      toRemove = Sets.newHashSet(Sets.difference(bpByNameserviceId.keySet(), addrMap.keySet()));
       
       assert toRefresh.size() + toAdd.size() ==
         addrMap.size() :
@@ -194,17 +192,17 @@ class BlockPoolManager {
       
       // Step 3. Start new nameservices
       if (!toAdd.isEmpty()) {
-        LOG.info("Starting BPOfferServices for nameservices: " +
-            Joiner.on(",").useForNull("<default>").join(toAdd));
+        
+        LOG.info("Starting BPOfferServices for nameservices: " + Joiner.on(",").useForNull("<default>").join(toAdd));
       
         for (String nsToAdd : toAdd) {
-          ArrayList<InetSocketAddress> addrs =
-            Lists.newArrayList(addrMap.get(nsToAdd).values());
+          ArrayList<InetSocketAddress> addrs = Lists.newArrayList(addrMap.get(nsToAdd).values());
           BPOfferService bpos = createBPOS(addrs);
           bpByNameserviceId.put(nsToAdd, bpos);
           offerServices.add(bpos);
         }
       }
+      
       startAll();
     }
 
